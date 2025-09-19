@@ -34,10 +34,15 @@ def create_app() -> FastAPI:
     load_dotenv()
     app = FastAPI(title="PhotoBooth API", version="0.1.0")
 
-    # 允許本地前端
+    # 允許本地前端和Vercel部署
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_origins=[
+            "http://localhost:5173", 
+            "http://127.0.0.1:5173",
+            "https://*.vercel.app",
+            "https://*.vercel.com"
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

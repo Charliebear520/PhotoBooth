@@ -20,12 +20,14 @@ const BG_STYLES: Record<string, string> = {
 
 // 照片（人像）風格（參考附圖）
 const PHOTO_STYLES: Record<string, string> = {
-  史努比風格: "請將照片改成Peanuts comic style by Charles M. Schulz",
-  吉卜力風格: "請將照片改成Ghibli手繪風格",
+  皮克斯風格:
+    "Transform the photo into Pixar 3D animation style, smooth rounded features, vibrant colors, soft lighting, cartoon-like proportions while preserving facial features, Disney Pixar character aesthetic, high-quality 3D rendering",
+  史努比風格:
+    "Transform the photo into Peanuts comic style by Charles M. Schulz, simple black line art, minimal shading, classic comic strip aesthetic, preserve facial features in Schulz's distinctive style",
   Q版公仔風格:
-    "super-deformed chibi figure, big head small body ratio 1:2, glossy vinyl toy surface, soft studio lighting, cute proportions, smooth skin, tiny hands, gentle reflections, high detail but clean shapes, preserve likeness, photo booth portrait",
-  漫畫風格:
-    "high-contrast manga illustration, bold inking, screen tones, cross-hatching, dynamic speedlines, JoJo-inspired dramatic shading, crisp line art, limited color or duotone look, strong highlights, preserve identity and pose, photo booth portrait",
+    "Transform into super-deformed chibi figure style, big head small body ratio 1:2, glossy vinyl toy surface, soft studio lighting, cute proportions, smooth skin, tiny hands, gentle reflections, high detail but clean shapes, preserve likeness, kawaii aesthetic",
+  動漫手繪風:
+    "Transform into Studio Ghibli hand-drawn animation style, soft watercolor-like textures, gentle shading, warm color palette, Miyazaki film aesthetic, preserve facial features in Ghibli's distinctive artistic style, high-quality anime illustration",
 };
 
 // 拼貼列印尺寸（像素）
@@ -62,6 +64,9 @@ function App() {
     null
   );
 
+  // 自定義文字
+  const [customText, setCustomText] = useState<string>("SNAPP!");
+
   // 攝像頭相關狀態
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number>(0);
@@ -82,6 +87,68 @@ function App() {
     () => capturedPhotos.filter(Boolean).length === 4,
     [capturedPhotos]
   );
+
+  // 即時預覽更新函數
+  const updatePreviewWithCustomText = useCallback(async () => {
+    if (!collageDataUrl && !stylizedUrl) return;
+
+    const sourceUrl = stylizedUrl || collageDataUrl;
+    if (!sourceUrl) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = COLLAGE_WIDTH;
+    canvas.height = COLLAGE_HEIGHT;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // 載入現有圖片
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    await new Promise<void>((res, rej) => {
+      img.onload = () => res();
+      img.onerror = () => rej(new Error("load image failed"));
+      img.src = sourceUrl;
+    });
+
+    // 繪製圖片
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // 清除原有文字區域（底部120px）
+    ctx.fillStyle = stylizedUrl ? "#ffffff" : "#ffffff";
+    ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
+
+    // 重新繪製背景（如果需要）
+    if (stylizedUrl && bgKey) {
+      // 這裡可以重新繪製背景，但為簡化直接使用現有圖片
+    }
+
+    // 繪製新的自定義文字
+    ctx.fillStyle = "#111";
+    ctx.font = "bold 48px sans-serif";
+    ctx.textAlign = "center";
+    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    ctx.shadowBlur = 10;
+    ctx.fillText(customText, canvas.width / 2, canvas.height - 48);
+    ctx.shadowBlur = 0;
+
+    const newDataUrl = canvas.toDataURL("image/png");
+    if (stylizedUrl) {
+      setStylizedUrl(newDataUrl);
+    } else {
+      setCollageDataUrl(newDataUrl);
+    }
+  }, [collageDataUrl, stylizedUrl, customText, bgKey]);
+
+  // 監聽文字變化，即時更新預覽
+  useEffect(() => {
+    if (customText !== "SNAPP!" && (collageDataUrl || stylizedUrl)) {
+      const timeoutId = setTimeout(() => {
+        updatePreviewWithCustomText();
+      }, 300); // 防抖動，避免過於頻繁的更新
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [customText, updatePreviewWithCustomText, collageDataUrl, stylizedUrl]);
 
   // 攝像頭相關功能
   const startCamera = useCallback(async () => {
@@ -331,26 +398,29 @@ function App() {
 
     const cols = 2;
     const rows = 2;
-    const gap = 28;
-    const bottomSpace = 120;
+    const gap = 20;
+    const bottomSpace = 100;
 
-    const cellAspectW = 3;
-    const cellAspectH = 4;
+    const cellAspectW = 1;
+    const cellAspectH = 1;
     const targetRatio = cellAspectW / cellAspectH;
 
     // 計算可用空間（扣除底部文字空間）
     const availableW = canvas.width;
     const availableH = canvas.height - bottomSpace;
 
-    // 計算格子尺寸
-    let cellW = (availableW - gap) / cols;
-    let cellH = cellW / targetRatio;
-    const totalHNeeded = rows * cellH + (rows - 1) * gap;
+    // 計算格子尺寸 - 確保正方形
+    const availableWidthForGrid = availableW - gap;
+    const availableHeightForGrid = availableH - gap;
 
-    if (totalHNeeded > availableH) {
-      cellH = (availableH - gap) / rows;
-      cellW = cellH * targetRatio;
-    }
+    // 計算每個格子的最大可能尺寸
+    const maxCellW = availableWidthForGrid / cols;
+    const maxCellH = availableHeightForGrid / rows;
+
+    // 使用較小的尺寸確保格子是正方形且不超出邊界
+    const cellSize = Math.min(maxCellW, maxCellH);
+    const cellW = cellSize;
+    const cellH = cellSize;
 
     // 計算總使用空間
     const totalW = cols * cellW + (cols - 1) * gap;
@@ -382,9 +452,9 @@ function App() {
       const x = startX + c * (cellW + gap);
       const y = startY + r * (cellH + gap);
 
-      // 使用 cover 模式，確保圖片填滿格子並保持比例
+      // 使用 cover 模式，確保圖片填滿正方形格子並保持比例
       const imgRatio = img.width / img.height;
-      const cellRatio = cellW / cellH;
+      const cellRatio = 1; // 正方形格子
 
       let sourceX = 0;
       let sourceY = 0;
@@ -443,7 +513,7 @@ function App() {
     ctx.textAlign = "center";
     ctx.shadowColor = "rgba(0,0,0,0.35)";
     ctx.shadowBlur = 10;
-    ctx.fillText("SNAPP!", canvas.width / 2, canvas.height - 48);
+    ctx.fillText(customText, canvas.width / 2, canvas.height - 48);
     ctx.shadowBlur = 0;
 
     const dataUrl = canvas.toDataURL("image/png");
@@ -460,6 +530,351 @@ function App() {
     a.download = "photobooth.png";
     a.click();
   }, [stylizedUrl, collageDataUrl]);
+
+  // 獨立轉換背景風格
+  const convertBackgroundStyle = useCallback(async () => {
+    if (!bgKey) return;
+    setError(null);
+    const currentKey = `背景風格轉換: ${bgKey}`;
+    setLoadingStyleKey(currentKey);
+
+    try {
+      // 生成新背景
+      const gen = await axios.post<GenerateResponse>("/api/generate", {
+        prompt: BG_STYLES[bgKey],
+        number_of_images: 1,
+        aspect_ratio: "3:4",
+        sample_image_size: "2K",
+      });
+      const bgB64 = gen.data.images?.[0]?.image_base64;
+      if (!bgB64) throw new Error("未取得背景圖");
+      const bgUrl = `data:image/png;base64,${bgB64}`;
+
+      // 重新合成（使用現有照片，只更換背景）
+      const canvas = document.createElement("canvas");
+      canvas.width = COLLAGE_WIDTH;
+      canvas.height = COLLAGE_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+
+      // 白底
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 新背景
+      const bg = await new Promise<HTMLImageElement>((res, rej) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => res(img);
+        img.onerror = () => rej(new Error("bg load fail"));
+        img.src = bgUrl;
+      });
+      const bgRatio = bg.width / bg.height;
+      const cvRatio = canvas.width / canvas.height;
+      let bgW = canvas.width;
+      let bgH = canvas.height;
+      if (bgRatio > cvRatio) {
+        bgH = canvas.height;
+        bgW = bgH * bgRatio;
+      } else {
+        bgW = canvas.width;
+        bgH = bgW / bgRatio;
+      }
+      ctx.drawImage(
+        bg,
+        (canvas.width - bgW) / 2,
+        (canvas.height - bgH) / 2,
+        bgW,
+        bgH
+      );
+
+      // 使用現有的照片（優先使用風格化結果，否則使用原圖）
+      const sourceUrls = styledUrls.map((s, i) => s || capturedPhotos[i]);
+      const imgs: HTMLImageElement[] = [];
+      for (const u of sourceUrls) {
+        if (u) {
+          const img = await new Promise<HTMLImageElement>((res, rej) => {
+            const im = new Image();
+            im.crossOrigin = "anonymous";
+            im.onload = () => res(im);
+            im.onerror = () => rej(new Error("img load fail"));
+            im.src = u;
+          });
+          imgs.push(img);
+        }
+      }
+
+      // 2x2 佈局
+      const margin = 60;
+      const cols = 2;
+      const rows = 2;
+      const gap = 20;
+      const bottomSpace = 100;
+      const targetRatio = 1; // 正方形
+      const availableW = canvas.width - margin * 2 - (cols - 1) * gap;
+      const availableH =
+        canvas.height - margin * 2 - (rows - 1) * gap - bottomSpace;
+      let cellW = availableW / cols;
+      let cellH = cellW / targetRatio;
+      const totalHNeeded = rows * cellH + (rows - 1) * gap;
+      if (totalHNeeded > availableH) {
+        cellH = availableH / rows;
+        cellW = cellH * targetRatio;
+      }
+      const usedH = rows * cellH + (rows - 1) * gap;
+      const startY = margin + (availableH - usedH) / 2;
+
+      imgs.forEach((img, i) => {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const x = margin + c * (cellW + gap);
+        const y = startY + r * (cellH + gap);
+
+        // 使用 cover 模式，確保圖片填滿正方形格子並保持比例
+        const imgRatio = img.width / img.height;
+        const cellRatio = 1; // 正方形格子
+
+        let sourceX = 0;
+        let sourceY = 0;
+        let sourceW = img.width;
+        let sourceH = img.height;
+
+        if (imgRatio > cellRatio) {
+          // 圖片比格子寬，裁切左右
+          sourceW = img.height * cellRatio;
+          sourceX = (img.width - sourceW) / 2;
+        } else {
+          // 圖片比格子高，裁切上下
+          sourceH = img.width / cellRatio;
+          sourceY = (img.height - sourceH) / 2;
+        }
+
+        const rad = 16;
+        const path = new Path2D();
+        path.moveTo(x + rad, y);
+        path.lineTo(x + cellW - rad, y);
+        path.quadraticCurveTo(x + cellW, y, x + cellW, y + rad);
+        path.lineTo(x + cellW, y + cellH - rad);
+        path.quadraticCurveTo(x + cellW, y + cellH, x + cellW - rad, y + cellH);
+        path.lineTo(x + rad, y + cellH);
+        path.quadraticCurveTo(x, y + cellH, x, y + cellH - rad);
+        path.lineTo(x, y + rad);
+        path.quadraticCurveTo(x, y, x + rad, y);
+
+        // 陰影
+        const shadowSpread = 12;
+        (ctx as any).shadowColor = "rgba(0,0,0,0.18)";
+        (ctx as any).shadowBlur = shadowSpread;
+        (ctx as any).shadowOffsetY = 6;
+        ctx.fillStyle = "rgba(255,255,255,0.001)";
+        ctx.fill(path);
+        (ctx as any).shadowBlur = 0;
+
+        ctx.save();
+        ctx.clip(path);
+        ctx.drawImage(
+          img,
+          sourceX,
+          sourceY,
+          sourceW,
+          sourceH,
+          x,
+          y,
+          cellW,
+          cellH
+        );
+        ctx.restore();
+      });
+
+      // 下方標題
+      ctx.fillStyle = "#111";
+      ctx.font = "bold 48px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(customText, canvas.width / 2, canvas.height - 48);
+
+      const out = canvas.toDataURL("image/png");
+      setStylizedUrl(out);
+    } catch (err: any) {
+      setError(err?.message || "背景風格轉換失敗");
+    } finally {
+      setLoadingStyleKey(null);
+    }
+  }, [bgKey, styledUrls, capturedPhotos]);
+
+  // 獨立轉換照片風格
+  const convertPhotoStyle = useCallback(async () => {
+    if (!photoKey) return;
+    setError(null);
+    const currentKey = `照片風格轉換: ${photoKey}`;
+    setLoadingStyleKey(currentKey);
+
+    try {
+      // 對四張照片逐一風格化
+      const perImageUrls: string[] = [];
+      for (let i = 0; i < 4; i++) {
+        const photoDataUrl = capturedPhotos[i];
+        if (!photoDataUrl) throw new Error(`缺少第 ${i + 1} 張來源`);
+
+        const response = await fetch(photoDataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `img${i + 1}.png`, {
+          type: blob.type || "image/png",
+        });
+
+        const form = new FormData();
+        form.append("prompt", PHOTO_STYLES[photoKey]);
+        form.append("number_of_images", "1");
+        form.append("model", "imagen-4.0-generate-001");
+        form.append("image", file);
+
+        let data: GenerateResponse;
+        try {
+          const r = await axios.post<GenerateResponse>("/api/stylize", form, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          data = r.data;
+        } catch {
+          const r2 = await axios.post<GenerateResponse>("/api/generate", {
+            prompt: PHOTO_STYLES[photoKey],
+            number_of_images: 1,
+          });
+          data = r2.data;
+        }
+        const b64 = data.images?.[0]?.image_base64;
+        if (!b64) throw new Error(`第 ${i + 1} 張風格化失敗`);
+        perImageUrls.push(`data:image/png;base64,${b64}`);
+      }
+
+      // 重新合成（使用現有背景，只更換照片）
+      const canvas = document.createElement("canvas");
+      canvas.width = COLLAGE_WIDTH;
+      canvas.height = COLLAGE_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+
+      // 白底
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 現有背景（如果有的話）
+      if (stylizedUrl) {
+        const bg = await new Promise<HTMLImageElement>((res, rej) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => res(img);
+          img.onerror = () => rej(new Error("bg load fail"));
+          img.src = stylizedUrl!;
+        });
+        ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      }
+
+      // 2x2 佈局
+      const margin = 60;
+      const cols = 2;
+      const rows = 2;
+      const gap = 20;
+      const bottomSpace = 100;
+      const targetRatio = 1; // 正方形
+      const availableW = canvas.width - margin * 2 - (cols - 1) * gap;
+      const availableH =
+        canvas.height - margin * 2 - (rows - 1) * gap - bottomSpace;
+      let cellW = availableW / cols;
+      let cellH = cellW / targetRatio;
+      const totalHNeeded = rows * cellH + (rows - 1) * gap;
+      if (totalHNeeded > availableH) {
+        cellH = availableH / rows;
+        cellW = cellH * targetRatio;
+      }
+      const usedH = rows * cellH + (rows - 1) * gap;
+      const startY = margin + (availableH - usedH) / 2;
+
+      // 載入四張風格化照片
+      const imgs: HTMLImageElement[] = [];
+      for (const u of perImageUrls) {
+        const img = await new Promise<HTMLImageElement>((res, rej) => {
+          const im = new Image();
+          im.crossOrigin = "anonymous";
+          im.onload = () => res(im);
+          im.onerror = () => rej(new Error("img load fail"));
+          im.src = u;
+        });
+        imgs.push(img);
+      }
+
+      imgs.forEach((img, i) => {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const x = margin + c * (cellW + gap);
+        const y = startY + r * (cellH + gap);
+
+        // 使用 cover 模式，確保圖片填滿正方形格子並保持比例
+        const imgRatio = img.width / img.height;
+        const cellRatio = 1; // 正方形格子
+
+        let sourceX = 0;
+        let sourceY = 0;
+        let sourceW = img.width;
+        let sourceH = img.height;
+
+        if (imgRatio > cellRatio) {
+          // 圖片比格子寬，裁切左右
+          sourceW = img.height * cellRatio;
+          sourceX = (img.width - sourceW) / 2;
+        } else {
+          // 圖片比格子高，裁切上下
+          sourceH = img.width / cellRatio;
+          sourceY = (img.height - sourceH) / 2;
+        }
+
+        const rad = 16;
+        const path = new Path2D();
+        path.moveTo(x + rad, y);
+        path.lineTo(x + cellW - rad, y);
+        path.quadraticCurveTo(x + cellW, y, x + cellW, y + rad);
+        path.lineTo(x + cellW, y + cellH - rad);
+        path.quadraticCurveTo(x + cellW, y + cellH, x + cellW - rad, y + cellH);
+        path.lineTo(x + rad, y + cellH);
+        path.quadraticCurveTo(x, y + cellH, x, y + cellH - rad);
+        path.lineTo(x, y + rad);
+        path.quadraticCurveTo(x, y, x + rad, y);
+
+        // 陰影
+        const shadowSpread = 12;
+        (ctx as any).shadowColor = "rgba(0,0,0,0.18)";
+        (ctx as any).shadowBlur = shadowSpread;
+        (ctx as any).shadowOffsetY = 6;
+        ctx.fillStyle = "rgba(255,255,255,0.001)";
+        ctx.fill(path);
+        (ctx as any).shadowBlur = 0;
+
+        ctx.save();
+        ctx.clip(path);
+        ctx.drawImage(
+          img,
+          sourceX,
+          sourceY,
+          sourceW,
+          sourceH,
+          x,
+          y,
+          cellW,
+          cellH
+        );
+        ctx.restore();
+      });
+
+      // 下方標題
+      ctx.fillStyle = "#111";
+      ctx.font = "bold 48px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(customText, canvas.width / 2, canvas.height - 48);
+
+      const out = canvas.toDataURL("image/png");
+      setStylizedUrl(out);
+    } catch (err: any) {
+      setError(err?.message || "照片風格轉換失敗");
+    } finally {
+      setLoadingStyleKey(null);
+    }
+  }, [photoKey, capturedPhotos, stylizedUrl]);
 
   // 生成背景，最後合成（在此階段統一對四張照片做風格化）
   const runStyling = useCallback(async () => {
@@ -570,23 +985,24 @@ function App() {
         );
       }
 
-      // 2x2 佈局（固定 3:4）
+      // 2x2 佈局（正方形）
       const margin = 60;
       const cols = 2;
       const rows = 2;
-      const gap = 28;
-      const bottomSpace = 120;
-      const targetRatio = 3 / 4;
+      const gap = 20;
+      const bottomSpace = 100;
+      const targetRatio = 1; // 正方形
       const availableW = canvas.width - margin * 2 - (cols - 1) * gap;
       const availableH =
         canvas.height - margin * 2 - (rows - 1) * gap - bottomSpace;
-      let cellW = availableW / cols;
-      let cellH = cellW / targetRatio;
-      const totalHNeeded = rows * cellH + (rows - 1) * gap;
-      if (totalHNeeded > availableH) {
-        cellH = availableH / rows;
-        cellW = cellH * targetRatio;
-      }
+
+      // 計算正方形格子尺寸
+      const maxCellW = availableW / cols;
+      const maxCellH = availableH / rows;
+      const cellSize = Math.min(maxCellW, maxCellH);
+      const cellW = cellSize;
+      const cellH = cellSize;
+
       const usedH = rows * cellH + (rows - 1) * gap;
       const startY = margin + (availableH - usedH) / 2;
 
@@ -609,39 +1025,59 @@ function App() {
         const x = margin + c * (cellW + gap);
         const y = startY + r * (cellH + gap);
 
+        // 使用 cover 模式，確保圖片填滿正方形格子並保持比例
         const imgRatio = img.width / img.height;
-        const cellRatio = cellW / cellH;
-        let drawW = cellW;
-        let drawH = cellH;
+        const cellRatio = 1; // 正方形格子
+
+        let sourceX = 0;
+        let sourceY = 0;
+        let sourceW = img.width;
+        let sourceH = img.height;
+
         if (imgRatio > cellRatio) {
-          drawH = cellH;
-          drawW = cellH * imgRatio;
+          // 圖片比格子寬，裁切左右
+          sourceW = img.height * cellRatio;
+          sourceX = (img.width - sourceW) / 2;
         } else {
-          drawW = cellW;
-          drawH = cellW / imgRatio;
+          // 圖片比格子高，裁切上下
+          sourceH = img.width / cellRatio;
+          sourceY = (img.height - sourceH) / 2;
         }
-        const dx = x + (cellW - drawW) / 2;
-        const dy = y + (cellH - drawH) / 2;
+
         const rad = 16;
         const path = new Path2D();
-        path.moveTo(dx + rad, dy);
-        path.lineTo(dx + drawW - rad, dy);
-        path.quadraticCurveTo(dx + drawW, dy, dx + drawW, dy + rad);
-        path.lineTo(dx + drawW, dy + drawH - rad);
-        path.quadraticCurveTo(
-          dx + drawW,
-          dy + drawH,
-          dx + drawW - rad,
-          dy + drawH
-        );
-        path.lineTo(dx + rad, dy + drawH);
-        path.quadraticCurveTo(dx, dy + drawH, dx, dy + drawH - rad);
-        path.lineTo(dx, dy + rad);
-        path.quadraticCurveTo(dx, dy, dx + rad, dy);
-        const clip = new Path2D(path);
+        path.moveTo(x + rad, y);
+        path.lineTo(x + cellW - rad, y);
+        path.quadraticCurveTo(x + cellW, y, x + cellW, y + rad);
+        path.lineTo(x + cellW, y + cellH - rad);
+        path.quadraticCurveTo(x + cellW, y + cellH, x + cellW - rad, y + cellH);
+        path.lineTo(x + rad, y + cellH);
+        path.quadraticCurveTo(x, y + cellH, x, y + cellH - rad);
+        path.lineTo(x, y + rad);
+        path.quadraticCurveTo(x, y, x + rad, y);
+
+        // 陰影
+        const shadowSpread = 12;
+        (ctx as any).shadowColor = "rgba(0,0,0,0.18)";
+        (ctx as any).shadowBlur = shadowSpread;
+        (ctx as any).shadowOffsetY = 6;
+        ctx.fillStyle = "rgba(255,255,255,0.001)";
+        ctx.fill(path);
+        (ctx as any).shadowBlur = 0;
+
         ctx.save();
-        ctx.clip(clip);
-        ctx.drawImage(img, dx, dy, drawW, drawH);
+        ctx.clip(path);
+        ctx.drawImage(
+          img,
+          sourceX,
+          sourceY,
+          sourceW,
+          sourceH,
+          x,
+          y,
+          cellW,
+          cellH
+        );
         ctx.restore();
       });
 
@@ -649,7 +1085,7 @@ function App() {
       ctx.fillStyle = "#111";
       ctx.font = "bold 48px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("SNAPP!", canvas.width / 2, canvas.height - 48);
+      ctx.fillText(customText, canvas.width / 2, canvas.height - 48);
 
       const out = canvas.toDataURL("image/png");
       setStylizedUrl(out);
@@ -1198,9 +1634,6 @@ function App() {
         height: "100vh",
         width: "100vw",
         background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         boxSizing: "border-box",
         overflow: "hidden",
         position: "fixed",
@@ -1210,96 +1643,478 @@ function App() {
     >
       <div
         style={{
-          maxWidth: 960,
-          margin: "0 auto",
-          padding: 24,
+          width: "100%",
+          height: "100%",
           background: "white",
-          borderRadius: "20px",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          margin: "0 2rem",
         }}
       >
-        <h2>完成！選擇相框與輸出</h2>
-        <div style={{ display: "grid", gap: 12 }}>
-          <div>
-            {stylizedUrl ? (
-              <img
-                src={stylizedUrl}
-                alt="stylized"
-                style={{
-                  width: 360,
-                  height: 480,
-                  objectFit: "contain",
-                  border: "1px solid #ddd",
-                  borderRadius: 8,
-                  padding: "1rem",
-                }}
-              />
-            ) : (
-              <>
-                <img
-                  src={collageDataUrl || undefined}
-                  alt="collage"
-                  style={{
-                    width: 360,
-                    height: 480,
-                    objectFit: "contain",
-                    border: "1px solid #ddd",
-                    borderRadius: 8,
-                  }}
-                />
-                <canvas
-                  ref={canvasRef}
-                  style={{ display: collageDataUrl ? "none" : "block" }}
-                />
-              </>
-            )}
-          </div>
+        {/* <h2
+          style={{
+            textAlign: "center",
+            marginBottom: "16px",
+            padding: "16px 0",
+            background: "linear-gradient(135deg, #667eea, #764ba2)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            fontSize: "1.6rem",
+            fontWeight: "bold",
+            flexShrink: 0,
+          }}
+        >
+          🎨 風格轉換與輸出
+        </h2> */}
 
-          <div>
-            <strong>相框背景風格</strong>
+        <div
+          style={{
+            display: "flex",
+            gap: "0",
+            alignItems: "stretch",
+            flex: 1,
+            minHeight: 0,
+            overflow: "hidden",
+          }}
+        >
+          {/* 左側：照片預覽 */}
+          <div
+            style={{
+              flex: "0 0 50%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              padding: "0 10px 0 20px",
+            }}
+          >
             <div
               style={{
+                background: "#f8fafc",
+                borderRadius: "12px",
+                padding: "16px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                height: "100%",
                 display: "flex",
-                gap: 8,
-                flexWrap: "wrap",
-                marginTop: 6,
+                flexDirection: "column",
+                overflow: "hidden",
               }}
             >
-              {Object.keys(BG_STYLES).map((k) => {
-                const active = bgKey === (k as keyof typeof BG_STYLES);
-                return (
-                  <button
-                    key={k}
+              <h3
+                style={{
+                  textAlign: "center",
+                  marginBottom: "16px",
+                  color: "#2d3748",
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  flexShrink: 0,
+                }}
+              >
+                📸 照片預覽
+              </h3>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  flex: 1,
+                  alignItems: "center",
+                  overflow: "hidden",
+                }}
+              >
+                {stylizedUrl ? (
+                  <img
+                    src={stylizedUrl}
+                    alt="stylized"
                     style={{
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      border: active ? "2px solid #28a745" : "1px solid #ddd",
-                      background: active ? "#28a745" : "#f8f9fa",
-                      color: active ? "#ffffff" : "#333333",
-                      fontSize: "14px",
-                      fontWeight: active ? "bold" : "normal",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      border: "2px solid #e2e8f0",
+                      borderRadius: "12px",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
                     }}
-                    onClick={() => setBgKey(k as keyof typeof BG_STYLES)}
-                  >
-                    {k}
-                  </button>
-                );
-              })}
+                  />
+                ) : (
+                  <>
+                    <img
+                      src={collageDataUrl || undefined}
+                      alt="collage"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        border: "2px solid #e2e8f0",
+                        borderRadius: "12px",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                      }}
+                    />
+                    <canvas
+                      ref={canvasRef}
+                      style={{ display: collageDataUrl ? "none" : "block" }}
+                    />
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 12 }}>
-            <button onClick={() => setStep("camera")}>重新拍攝</button>
-            <button
-              disabled={!collageDataUrl || !!loadingStyleKey}
-              onClick={runStyling}
+          {/* 右側：風格選擇 */}
+          <div
+            style={{
+              flex: "0 0 50%",
+              height: "100%",
+              overflow: "hidden",
+              padding: "0 20px 0 10px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                height: "100%",
+                overflowY: "auto",
+                paddingRight: "8px",
+                // 隱藏滾動條但保持滾動功能
+                scrollbarWidth: "none", // Firefox
+                msOverflowStyle: "none", // IE/Edge
+              }}
+              className="hide-scrollbar"
             >
-              {loadingStyleKey ? "處理中…" : "開始套用背景並輸出"}
-            </button>
-            <button onClick={downloadImage}>下載 PNG</button>
+              {/* 風格選擇區域 */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #f8fafc, #e2e8f0)",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  border: "1px solid #cbd5e0",
+                  flexShrink: 0,
+                }}
+              >
+                <h3
+                  style={{
+                    marginBottom: "10px",
+                    color: "#2d3748",
+                    fontSize: "1rem",
+                    fontWeight: "bold",
+                    textAlign: "center",
+                  }}
+                >
+                  🎨 風格選擇
+                </h3>
+
+                <div style={{ display: "flex", gap: "16px" }}>
+                  {/* 左側：相框背景風格 */}
+                  <div style={{ flex: 1 }}>
+                    <h4
+                      style={{
+                        marginBottom: "12px",
+                        color: "#0277bd",
+                        fontSize: "1rem",
+                        fontWeight: "bold",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      🖼️ 相框背景風格
+                    </h4>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(2, 1fr)",
+                        gap: "8px",
+                      }}
+                    >
+                      {Object.keys(BG_STYLES).map((k) => {
+                        const active = bgKey === (k as keyof typeof BG_STYLES);
+                        return (
+                          <button
+                            key={k}
+                            style={{
+                              padding: "8px 10px",
+                              borderRadius: "8px",
+                              border: active
+                                ? "2px solid #0288d1"
+                                : "2px solid #e0e0e0",
+                              background: active ? "#0288d1" : "#ffffff",
+                              color: active ? "#ffffff" : "#424242",
+                              fontSize: "12px",
+                              fontWeight: active ? "bold" : "normal",
+                              cursor: "pointer",
+                              transition: "all 0.3s ease",
+                              boxShadow: active
+                                ? "0 2px 8px rgba(2, 136, 209, 0.3)"
+                                : "0 1px 4px rgba(0,0,0,0.1)",
+                            }}
+                            onClick={() =>
+                              setBgKey(k as keyof typeof BG_STYLES)
+                            }
+                          >
+                            {k}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 右側：照片人像風格 */}
+                  <div style={{ flex: 1 }}>
+                    <h4
+                      style={{
+                        marginBottom: "12px",
+                        color: "#7b1fa2",
+                        fontSize: "1rem",
+                        fontWeight: "bold",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      👤 照片人像風格
+                    </h4>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(2, 1fr)",
+                        gap: "8px",
+                      }}
+                    >
+                      {Object.keys(PHOTO_STYLES).map((k) => {
+                        const active =
+                          photoKey === (k as keyof typeof PHOTO_STYLES);
+                        return (
+                          <button
+                            key={k}
+                            style={{
+                              padding: "8px 10px",
+                              borderRadius: "8px",
+                              border: active
+                                ? "2px solid #8e24aa"
+                                : "2px solid #e0e0e0",
+                              background: active ? "#8e24aa" : "#ffffff",
+                              color: active ? "#ffffff" : "#424242",
+                              fontSize: "12px",
+                              fontWeight: active ? "bold" : "normal",
+                              cursor: "pointer",
+                              transition: "all 0.3s ease",
+                              boxShadow: active
+                                ? "0 2px 8px rgba(142, 36, 170, 0.3)"
+                                : "0 1px 4px rgba(0,0,0,0.1)",
+                            }}
+                            onClick={() =>
+                              setPhotoKey(k as keyof typeof PHOTO_STYLES)
+                            }
+                          >
+                            {k}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 自定義文字編輯 */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  border: "1px solid #0ea5e9",
+                  flexShrink: 0,
+                }}
+              >
+                <h3
+                  style={{
+                    marginBottom: "8px",
+                    color: "#0369a1",
+                    fontSize: "0.95rem",
+                    fontWeight: "bold",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  ✏️ 自定義文字
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      color: "#475569",
+                    }}
+                  >
+                    照片下方顯示的文字：
+                  </label>
+                  <input
+                    type="text"
+                    value={customText}
+                    onChange={(e) => setCustomText(e.target.value)}
+                    placeholder="輸入要顯示的文字..."
+                    style={{
+                      padding: "12px 16px",
+                      fontSize: "16px",
+                      border: "2px solid #e2e8f0",
+                      borderRadius: "10px",
+                      background: "#ffffff",
+                      color: "#2d3748",
+                      fontWeight: "bold",
+                      transition: "all 0.3s ease",
+                      outline: "none",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#0ea5e9";
+                      e.target.style.boxShadow =
+                        "0 4px 12px rgba(14, 165, 233, 0.3)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e2e8f0";
+                      e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#64748b",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    💡 提示：文字會即時顯示在左側預覽中
+                  </div>
+                </div>
+              </div>
+
+              {/* 操作按鈕 */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #fff3e0, #ffe0b2)",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  border: "1px solid #ffcc02",
+                  flexShrink: 0,
+                }}
+              >
+                <h3
+                  style={{
+                    marginBottom: "8px",
+                    color: "#f57c00",
+                    fontSize: "0.95rem",
+                    fontWeight: "bold",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  ⚙️ 操作選項
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <button
+                    onClick={() => setStep("camera")}
+                    style={{
+                      padding: "10px 16px",
+                      fontSize: "13px",
+                      background: "#ffffff",
+                      color: "#4a5568",
+                      border: "2px solid #e2e8f0",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      transition: "all 0.3s ease",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    🔄 重新拍攝
+                  </button>
+
+                  <button
+                    disabled={!collageDataUrl || !!loadingStyleKey}
+                    onClick={runStyling}
+                    style={{
+                      padding: "10px 16px",
+                      fontSize: "13px",
+                      background: loadingStyleKey
+                        ? "#94a3b8"
+                        : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: loadingStyleKey ? "not-allowed" : "pointer",
+                      fontWeight: "bold",
+                      transition: "all 0.3s ease",
+                      boxShadow: loadingStyleKey
+                        ? "none"
+                        : "0 2px 8px rgba(102, 126, 234, 0.3)",
+                    }}
+                  >
+                    {loadingStyleKey ? "🎨 處理中…" : "🎨 套用風格並生成"}
+                  </button>
+
+                  <button
+                    onClick={downloadImage}
+                    disabled={!stylizedUrl && !collageDataUrl}
+                    style={{
+                      padding: "10px 16px",
+                      fontSize: "13px",
+                      background:
+                        !stylizedUrl && !collageDataUrl
+                          ? "#94a3b8"
+                          : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor:
+                        !stylizedUrl && !collageDataUrl
+                          ? "not-allowed"
+                          : "pointer",
+                      fontWeight: "bold",
+                      transition: "all 0.3s ease",
+                      boxShadow:
+                        !stylizedUrl && !collageDataUrl
+                          ? "none"
+                          : "0 2px 8px rgba(16, 185, 129, 0.3)",
+                    }}
+                  >
+                    💾 下載照片
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          {error && <div style={{ color: "red" }}>錯誤：{error}</div>}
         </div>
+
+        {error && (
+          <div
+            style={{
+              color: "#dc2626",
+              background: "linear-gradient(135deg, #fef2f2, #fee2e2)",
+              padding: "16px",
+              borderRadius: "12px",
+              marginTop: "20px",
+              border: "1px solid #fecaca",
+              textAlign: "center",
+              fontWeight: "bold",
+              boxShadow: "0 2px 8px rgba(220, 38, 38, 0.1)",
+            }}
+          >
+            ⚠️ 錯誤：{error}
+          </div>
+        )}
       </div>
     </div>
   );

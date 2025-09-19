@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from mangum import Mangum
 
 app = FastAPI()
 
@@ -11,4 +12,4 @@ async def health():
     return {"status": "ok"}
 
 # Vercel serverless function entry point
-handler = app
+handler = Mangum(app)

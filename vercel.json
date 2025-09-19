@@ -9,12 +9,12 @@
       }
     },
     {
-      "src": "api/test.py",
+      "src": "api/simple.py",
       "use": "@vercel/python"
     }
   ],
   "functions": {
-    "api/test.py": {
+    "api/simple.py": {
       "maxDuration": 60
     }
   }

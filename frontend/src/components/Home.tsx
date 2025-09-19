@@ -45,7 +45,7 @@ export const Home: React.FC<HomeProps> = ({ onStart }) => {
             backgroundClip: "text",
           }}
         >
-          拍貼機
+          IUI LAB PHOTOBOOTH
         </h1>
 
         <p

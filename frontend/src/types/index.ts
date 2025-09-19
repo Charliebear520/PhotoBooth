@@ -7,7 +7,7 @@ export type AppStep = "home" | "camera" | "compose" | "edit";
 
 // 風格類型
 export type BackgroundStyle = "清新日系" | "復古菲林" | "韓系膠片" | "黑白經典";
-export type PhotoStyle = "皮克斯風格" | "史努比風格" | "Q版公仔風格" | "動漫手繪風";
+export type PhotoStyle = "皮克斯風格" | "原始照片" | "Q版公仔風格" | "動漫手繪風";
 
 // 應用狀態
 export interface AppState {

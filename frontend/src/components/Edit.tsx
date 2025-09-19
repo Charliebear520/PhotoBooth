@@ -106,6 +106,16 @@ export const Edit: React.FC<EditProps> = ({
       const photoDataUrl = capturedPhotos[idx];
       if (!photoDataUrl || !photoKey) return; // 無照片或未選照片風格則跳過
 
+      // 如果是原始照片風格，直接使用原始照片，不進行AI處理
+      if (photoKey === "原始照片") {
+        setStyledUrls((prev) => {
+          const c = [...prev];
+          c[idx] = photoDataUrl;
+          return c;
+        });
+        return;
+      }
+
       // 將dataURL轉換為File
       const response = await fetch(photoDataUrl);
       const blob = await response.blob();
@@ -386,8 +396,8 @@ export const Edit: React.FC<EditProps> = ({
   return (
     <div
       style={{
-        height: "100vh",
-        width: "100vw",
+        //height: "100vh",
+        //width: "100vw",
         background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
         boxSizing: "border-box",
         overflow: "hidden",
@@ -424,7 +434,7 @@ export const Edit: React.FC<EditProps> = ({
           {/* 左側：照片預覽 */}
           <div
             style={{
-              flex: "0 0 50%",
+              flex: "0 1 50%",
               height: "100%",
               display: "flex",
               flexDirection: "column",
@@ -435,6 +445,8 @@ export const Edit: React.FC<EditProps> = ({
               style={{
                 background: "#f8fafc",
                 borderRadius: "12px",
+                alignItems:"center",
+                justifyContent:"center",
                 padding: "16px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 height: "100%",
@@ -443,10 +455,10 @@ export const Edit: React.FC<EditProps> = ({
                 overflow: "hidden",
               }}
             >
-              <h3
+              {/* <h3
                 style={{
                   textAlign: "center",
-                  marginBottom: "16px",
+                  margin: "16px",
                   color: "#2d3748",
                   fontSize: "1.2rem",
                   fontWeight: "bold",
@@ -454,10 +466,13 @@ export const Edit: React.FC<EditProps> = ({
                 }}
               >
                 📸 照片預覽
-              </h3>
+              </h3> */}
               <div
                 style={{
                   display: "flex",
+                  height:"90%",
+                  width:"90%",
+                  
                   justifyContent: "center",
                   flex: 1,
                   alignItems: "center",
@@ -504,10 +519,10 @@ export const Edit: React.FC<EditProps> = ({
           {/* 右側：風格選擇 */}
           <div
             style={{
-              flex: "0 0 50%",
+              flex: "0 1 50%",
               height: "100%",
-              overflow: "hidden",
-              padding: "0 20px 0 10px",
+              //overflow: "hidden",
+              padding: "20px 20px 0 20px",
             }}
           >
             <div

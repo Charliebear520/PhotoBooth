@@ -219,18 +219,7 @@ export const Camera: React.FC<CameraProps> = ({ onComplete }) => {
                         overflow: "hidden",
                       }}
                     >
-                      <div
-                        style={{
-                          padding: "8px 12px",
-                          background: "#28a745",
-                          color: "white",
-                          fontSize: "14px",
-                          fontWeight: "bold",
-                          textAlign: "center",
-                        }}
-                      >
-                        ✓ 第 {currentPhotoIndex + 1} 張照片已拍攝
-                      </div>
+                     
                       <img
                         src={capturedPhotos[currentPhotoIndex]!}
                         alt={`captured_${currentPhotoIndex}`}
@@ -252,7 +241,7 @@ export const Camera: React.FC<CameraProps> = ({ onComplete }) => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: "rgba(0,0,0,0.7)",
+                        
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",

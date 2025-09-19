@@ -74,3 +74,4 @@ poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ## 授權
 
 此專案程式碼以 MIT License 釋出。
+# Trigger deployment Fri Sep 19 14:24:01 CST 2025

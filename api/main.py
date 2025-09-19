@@ -1,19 +1,17 @@
 import sys
 import os
+from pathlib import Path
 
 # 添加backend路径到Python路径
-backend_path = os.path.join(os.path.dirname(__file__), '..', 'backend')
-sys.path.insert(0, backend_path)
+backend_path = Path(__file__).parent.parent / "backend"
+sys.path.insert(0, str(backend_path))
 
-try:
-    from app.main import app
-    print(f"Successfully imported app from {backend_path}")
-except ImportError as e:
-    print(f"Import error: {e}")
-    print(f"Python path: {sys.path}")
-    print(f"Current directory: {os.getcwd()}")
-    print(f"Files in current dir: {os.listdir('.')}")
-    raise
+# 导入后端应用
+from app.main import create_app
+from mangum import Mangum
 
-# Vercel serverless function entry point
-handler = app
+# 创建FastAPI应用
+app = create_app()
+
+# 创建Mangum处理器用于Vercel
+handler = Mangum(app)

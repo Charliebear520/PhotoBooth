@@ -351,13 +351,21 @@ function App() {
             headers: { "Content-Type": "multipart/form-data" },
           });
           data = r.data;
-        } catch {
+        } catch (error: any) {
+          console.error("Stylize API error:", error);
           // 後備：純文字
-          const r2 = await axios.post<GenerateResponse>("/api/generate", {
-            prompt: PHOTO_STYLES[photoKey],
-            number_of_images: 1,
-          });
-          data = r2.data;
+          try {
+            const r2 = await axios.post<GenerateResponse>("/api/generate", {
+              prompt: PHOTO_STYLES[photoKey],
+              number_of_images: 1,
+            });
+            data = r2.data;
+          } catch (error2: any) {
+            console.error("Generate API error:", error2);
+            throw new Error(
+              `API调用失败: ${error2.response?.data?.detail || error2.message}`
+            );
+          }
         }
         const b64 = data.images?.[0]?.image_base64;
         if (!b64) throw new Error("未取得單張風格結果");
@@ -529,6 +537,32 @@ function App() {
     a.click();
   }, [stylizedUrl, collageDataUrl]);
 
+  // 自动检查API状态（仅在控制台显示）
+  const checkApiStatus = useCallback(async () => {
+    try {
+      const response = await fetch("/api/debug");
+      const data = await response.json();
+      console.log("🔍 API状态检查:", data);
+      console.log("🔑 API密钥状态:");
+      console.log(
+        `   GEMINI_API_KEY: ${
+          data.gemini_api_key_set ? "✅ 已设置" : "❌ 未设置"
+        }`
+      );
+      console.log(`   GEMINI密钥预览: ${data.gemini_key_preview}`);
+      console.log(`   GEMINI密钥长度: ${data.gemini_key_length}`);
+      console.log(`   环境: ${data.environment}`);
+      console.log(`   Vercel区域: ${data.vercel_region}`);
+    } catch (error) {
+      console.error("❌ 获取API状态失败:", error);
+    }
+  }, []);
+
+  // 页面加载时自动检查API状态
+  useEffect(() => {
+    checkApiStatus();
+  }, [checkApiStatus]);
+
   // 生成背景，最後合成（在此階段統一對四張照片做風格化）
   const runStyling = useCallback(async () => {
     if (capturedPhotos.filter(Boolean).length !== 4) return;
@@ -570,12 +604,22 @@ function App() {
               headers: { "Content-Type": "multipart/form-data" },
             });
             data = r.data;
-          } catch {
-            const r2 = await axios.post<GenerateResponse>("/api/generate", {
-              prompt: PHOTO_STYLES[photoKey],
-              number_of_images: 1,
-            });
-            data = r2.data;
+          } catch (error: any) {
+            console.error("Stylize API error:", error);
+            try {
+              const r2 = await axios.post<GenerateResponse>("/api/generate", {
+                prompt: PHOTO_STYLES[photoKey],
+                number_of_images: 1,
+              });
+              data = r2.data;
+            } catch (error2: any) {
+              console.error("Generate API error:", error2);
+              throw new Error(
+                `API调用失败: ${
+                  error2.response?.data?.detail || error2.message
+                }`
+              );
+            }
           }
           const b64 = data.images?.[0]?.image_base64;
           if (!b64) throw new Error(`第 ${i + 1} 張風格化失敗`);
@@ -1772,6 +1816,7 @@ function App() {
             ⚠️ 錯誤：{error}
           </div>
         )}
+
       </div>
     </div>
   );

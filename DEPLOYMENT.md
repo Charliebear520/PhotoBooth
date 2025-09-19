@@ -22,7 +22,6 @@
 
 ```
 GEMINI_API_KEY = your_actual_gemini_api_key_here
-STABILITY_API_KEY = your_actual_stability_api_key_here (可选)
 ```
 
 **注意**:
@@ -47,7 +46,6 @@ vercel
 
 # 设置环境变量 (可选，推荐在Dashboard中设置)
 vercel env add GEMINI_API_KEY
-vercel env add STABILITY_API_KEY
 ```
 
 #### 方法二：通过 GitHub 集成

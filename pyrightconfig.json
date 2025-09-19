@@ -1,0 +1,31 @@
+{
+  "include": ["backend/app", "api"],
+  "exclude": [
+    "**/__pycache__",
+    "**/.venv",
+    "**/venv",
+    "**/node_modules",
+    "frontend"
+  ],
+  "ignore": ["**/node_modules", "**/dist", "**/build"],
+  "defineConstant": {
+    "DEBUG": true
+  },
+  "stubPath": "stubs",
+  "reportMissingImports": "none",
+  "reportMissingTypeStubs": "none",
+  "reportGeneralTypeIssues": "warning",
+  "reportOptionalMemberAccess": "none",
+  "reportOptionalSubscript": "none",
+  "reportPrivateImportUsage": "none",
+  "pythonVersion": "3.10",
+  "pythonPlatform": "Linux",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "pythonVersion": "3.10",
+      "pythonPlatform": "Linux",
+      "extraPaths": [".", "backend", "api"]
+    }
+  ]
+}

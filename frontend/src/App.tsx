@@ -1102,17 +1102,18 @@ function App() {
       <div
         style={{
           height: "100vh",
-          width: "100vw",
+          width: "100%",
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "20px",
+          padding: "3rem",
           boxSizing: "border-box",
           overflow: "hidden",
           position: "fixed",
           top: 0,
           left: 0,
+          
         }}
       >
         <div
@@ -1639,6 +1640,10 @@ function App() {
         position: "fixed",
         top: 0,
         left: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "3rem",
       }}
     >
       <div

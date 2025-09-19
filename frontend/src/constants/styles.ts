@@ -1,12 +1,5 @@
-import { useState } from "react";
-import "./App.css";
-
-// 基本型別
-type ImageItem = { image_base64: string };
-type GenerateResponse = { images: ImageItem[] };
-
 // 背景相框風格（大膽視覺的背景圖）
-const BG_STYLES: Record<string, string> = {
+export const BG_STYLES: Record<string, string> = {
   清新日系:
     "hyper minimal poster background, airy white space, soft pastel gradients (peach, mint, sky blue), floating geometric shapes, subtle paper texture, high-key light, editorial layout, photo booth poster, 3:4, ultra clean design, award-winning graphic design, art school studio vibe",
   復古菲林:
@@ -18,7 +11,7 @@ const BG_STYLES: Record<string, string> = {
 };
 
 // 照片（人像）風格（參考附圖）
-const PHOTO_STYLES: Record<string, string> = {
+export const PHOTO_STYLES: Record<string, string> = {
   皮克斯風格:
     "Transform the photo into Pixar 3D animation style, smooth rounded features, vibrant colors, soft lighting, cartoon-like proportions while preserving facial features, Disney Pixar character aesthetic, high-quality 3D rendering",
   史努比風格:
@@ -30,83 +23,6 @@ const PHOTO_STYLES: Record<string, string> = {
 };
 
 // 拼貼列印尺寸（像素）
-const COLLAGE_WIDTH = 1200; // 4:6 比例可列印
-const COLLAGE_HEIGHT = 1600;
+export const COLLAGE_WIDTH = 1200; // 4:6 比例可列印
+export const COLLAGE_HEIGHT = 1600;
 
-function App() {
-  // UI 階段：home -> camera -> compose -> edit
-  const [step, setStep] = useState<AppStep>("home");
-  
-  // 調試信息
-  console.log("App 組件已渲染，當前步驟:", step);
-
-  // 合成後的 dataURL（透明底 2x2）
-  const [collageDataUrl, setCollageDataUrl] = useState<string | null>(null);
-
-  // 自定義文字
-  const [customText] = useState<string>("SNAPP!");
-
-  // 攝像頭相關狀態
-  const [capturedPhotos, setCapturedPhotos] = useState<(string | null)[]>([
-    null,
-    null,
-    null,
-    null,
-  ]);
-
-  // 處理步驟轉換
-  const handleStart = () => {
-    setStep("camera");
-  };
-
-  const handleCameraComplete = (photos: (string | null)[]) => {
-    setCapturedPhotos(photos);
-      setStep("compose");
-  };
-
-  const handleCompose = (dataUrl: string) => {
-    setCollageDataUrl(dataUrl);
-    setStep("edit");
-  };
-
-  const handleBackToCamera = () => {
-              setStep("camera");
-  };
-
-  // 根據當前步驟渲染對應組件
-  switch (step) {
-    case "home":
-      return <Home onStart={handleStart} />;
-    
-    case "camera":
-      return (
-        <Camera
-          onComplete={handleCameraComplete}
-        />
-      );
-    
-    case "compose":
-    return (
-        <Compose
-          capturedPhotos={capturedPhotos}
-          onCompose={handleCompose}
-          onBack={handleBackToCamera}
-          customText={customText}
-        />
-      );
-    
-    case "edit":
-  return (
-        <Edit
-          capturedPhotos={capturedPhotos}
-          collageDataUrl={collageDataUrl}
-          onBack={handleBackToCamera}
-        />
-      );
-    
-    default:
-      return <Home onStart={handleStart} />;
-  }
-}
-
-export default App;

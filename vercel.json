@@ -9,14 +9,14 @@
       }
     },
     {
-      "src": "api/main.py",
+      "src": "api/test.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/main.py"
+      "dest": "/api/test.py"
     },
     {
       "src": "/(.*)",
@@ -24,8 +24,8 @@
     }
   ],
   "functions": {
-    "api/main.py": {
-      "maxDuration": 30
+    "api/test.py": {
+      "maxDuration": 60
     }
   }
 }

@@ -87,6 +87,7 @@ def create_app() -> FastAPI:
             "python_version": sys.version,
             "environment": os.getenv("VERCEL_ENV", "unknown"),
             "vercel_region": os.getenv("VERCEL_REGION", "unknown"),
+            "all_env_vars": {k: v for k, v in os.environ.items() if "GEMINI" in k or "VERCEL" in k},
         }
     
     @app.post("/api/test-generate")
@@ -125,6 +126,7 @@ def create_app() -> FastAPI:
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
                 logger.error("GEMINI_API_KEY not found")
+                logger.error(f"Available env vars: {list(os.environ.keys())}")
                 raise HTTPException(status_code=500, detail="缺少 GEMINI_API_KEY")
 
             url = (
@@ -265,6 +267,8 @@ def create_app() -> FastAPI:
             # 使用 Gemini 2.5 Flash Image（多模態編輯）
             gemini_key = os.getenv("GEMINI_API_KEY")
             if not gemini_key:
+                logger.error("GEMINI_API_KEY not found in stylize")
+                logger.error(f"Available env vars: {list(os.environ.keys())}")
                 raise HTTPException(status_code=500, detail="缺少 GEMINI_API_KEY")
             
             if gemini_key:

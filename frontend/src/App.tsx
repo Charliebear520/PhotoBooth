@@ -23,7 +23,7 @@ const PHOTO_STYLES: Record<string, string> = {
   皮克斯風格:
     "Transform the photo into Pixar 3D animation style, smooth rounded features, vibrant colors, soft lighting, cartoon-like proportions while preserving facial features, Disney Pixar character aesthetic, high-quality 3D rendering",
   史努比風格:
-    "Transform the photo into Peanuts comic style by Charles M. Schulz, simple black line art, minimal shading, classic comic strip aesthetic, preserve facial features in Schulz's distinctive style",
+    "幫我將這張圖片生成史努比人物風格",
   Q版公仔風格:
     "Transform into super-deformed chibi figure style, big head small body ratio 1:2, glossy vinyl toy surface, soft studio lighting, cute proportions, smooth skin, tiny hands, gentle reflections, high detail but clean shapes, preserve likeness, kawaii aesthetic",
   動漫手繪風:

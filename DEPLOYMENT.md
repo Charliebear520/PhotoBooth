@@ -12,12 +12,24 @@
 
 ### 1. 准备环境变量
 
+**重要**: 环境变量需要在 Vercel Dashboard 中手动设置，不要在代码中硬编码 API 密钥。
+
 在 Vercel Dashboard 中设置以下环境变量：
 
+1. 进入你的项目设置
+2. 点击 "Environment Variables" 标签
+3. 添加以下变量：
+
 ```
-GEMINI_API_KEY=your_gemini_api_key_here
-STABILITY_API_KEY=your_stability_api_key_here (可选)
+GEMINI_API_KEY = your_actual_gemini_api_key_here
+STABILITY_API_KEY = your_actual_stability_api_key_here (可选)
 ```
+
+**注意**:
+
+- 不要使用 `@` 符号前缀
+- 直接输入你的实际 API 密钥值
+- 确保选择正确的环境（Production, Preview, Development）
 
 ### 2. 部署到 Vercel
 
@@ -33,7 +45,7 @@ vercel login
 # 部署
 vercel
 
-# 设置环境变量
+# 设置环境变量 (可选，推荐在Dashboard中设置)
 vercel env add GEMINI_API_KEY
 vercel env add STABILITY_API_KEY
 ```

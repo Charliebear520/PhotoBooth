@@ -22,9 +22,5 @@
       "src": "/(.*)",
       "dest": "/frontend/$1"
     }
-  ],
-  "env": {
-    "GEMINI_API_KEY": "@gemini_api_key",
-    "STABILITY_API_KEY": "@stability_api_key"
-  }
+  ]
 }

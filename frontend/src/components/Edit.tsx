@@ -284,10 +284,81 @@ export const Edit: React.FC<EditProps> = ({
   const downloadImage = useCallback(() => {
     const url = stylizedUrl || previewUrl || collageDataUrl;
     if (!url) return;
+    
+    // 下載功能
     const a = document.createElement("a");
     a.href = url;
     a.download = "photobooth.png";
     a.click();
+    
+    // 列印功能 - 直接跳出列印對話框
+    const printImg = new Image();
+    printImg.onload = () => {
+      // 創建一個隱藏的iframe來處理列印
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.left = '-9999px';
+      iframe.style.top = '-9999px';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      
+      document.body.appendChild(iframe);
+      
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (iframeDoc) {
+        iframeDoc.open();
+        iframeDoc.write(`
+          <html>
+            <head>
+              <title>列印照片</title>
+              <style>
+                body {
+                  margin: 0;
+                  padding: 0;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  min-height: 100vh;
+                }
+                img {
+                  max-width: 100%;
+                  max-height: 100%;
+                  object-fit: contain;
+                }
+                @media print {
+                  body {
+                    margin: 0;
+                    padding: 0;
+                  }
+                  img {
+                    width: 100%;
+                    height: auto;
+                    max-width: none;
+                    max-height: none;
+                  }
+                }
+              </style>
+            </head>
+            <body>
+              <img src="${url}" alt="PhotoBooth 照片" />
+            </body>
+          </html>
+        `);
+        iframeDoc.close();
+        
+        // 等待iframe載入完成後直接列印
+        iframe.onload = () => {
+          setTimeout(() => {
+            iframe.contentWindow?.print();
+            // 列印完成後移除iframe
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+            }, 1000);
+          }, 100);
+        };
+      }
+    };
+    printImg.src = url;
   }, [stylizedUrl, previewUrl, collageDataUrl]);
 
   // 生成背景，最後合成（在此階段統一對四張照片做風格化）
@@ -890,7 +961,7 @@ export const Edit: React.FC<EditProps> = ({
                           : "0 2px 8px rgba(16, 185, 129, 0.3)",
                     }}
                   >
-                    💾 下載照片
+                    💾 下載並列印照片
                   </button>
                 </div>
               </div>

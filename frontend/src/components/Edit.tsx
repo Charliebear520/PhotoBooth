@@ -39,6 +39,16 @@ export const Edit: React.FC<EditProps> = ({
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // 統一的照片位置計算函數
+  const calculatePhotoPosition = useCallback((i: number, cellW: number, cellH: number, gap: number, margin: number, startY: number) => {
+    const cols = 2;
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    const x = margin + c * (cellW + gap) + 110; // 向右偏移50px (70+50=120)
+    const y = startY + r * (cellH + gap) + 80; // 統一的Y偏移
+    return { x, y };
+  }, []);
+
   // 生成即時預覽（包含背景和文字）
   const generatePreview = useCallback(async () => {
     if (!collageDataUrl) return;
@@ -63,21 +73,22 @@ export const Edit: React.FC<EditProps> = ({
     const availableW = canvas.width - margin * 2 - (cols - 1) * gap;
     const availableH = canvas.height - margin * 2 - (rows - 1) * gap - bottomSpace;
     
-    // 照片比例 3:4
+    // 照片比例 3:4，縮小到 2/3
     const photoRatio = 3 / 4;
+    const scaleFactor = 4 / 5; // 縮小到 2/3
     
     const maxCellW = availableW / cols;
     const maxCellH = availableH / rows;
     
-    // 計算格子尺寸，保持3:4比例
+    // 計算格子尺寸，保持3:4比例並縮小到 2/3
     let cellW, cellH;
     if (maxCellW / maxCellH > photoRatio) {
       // 高度限制
-      cellH = maxCellH;
+      cellH = maxCellH * scaleFactor;
       cellW = cellH * photoRatio;
     } else {
       // 寬度限制
-      cellW = maxCellW;
+      cellW = maxCellW * scaleFactor;
       cellH = cellW / photoRatio;
     }
     
@@ -100,10 +111,7 @@ export const Edit: React.FC<EditProps> = ({
     
     for (let i = 0; i < loadedPhotos.length; i++) {
       const img = loadedPhotos[i];
-      const r = Math.floor(i / cols);
-      const c = i % cols;
-      const x = margin + c * (cellW + gap);
-      const y = startY + r * (cellH + gap);
+      const { x, y } = calculatePhotoPosition(i, cellW, cellH, gap, margin, startY);
       
       // 使用 cover 模式，確保圖片填滿3:4比例格子並保持比例
       const imgRatio = img.width / img.height;
@@ -365,21 +373,22 @@ export const Edit: React.FC<EditProps> = ({
       const availableH =
         canvas.height - margin * 2 - (rows - 1) * gap - bottomSpace;
 
-      // 照片比例 3:4
+      // 照片比例 3:4，縮小到 2/3
       const photoRatio = 3 / 4;
+      const scaleFactor = 4 / 5; // 與預覽函數保持一致
       
-      // 計算格子尺寸，保持3:4比例
+      // 計算格子尺寸，保持3:4比例並縮小到 2/3
       const maxCellW = availableW / cols;
       const maxCellH = availableH / rows;
       
       let cellW, cellH;
       if (maxCellW / maxCellH > photoRatio) {
         // 高度限制
-        cellH = maxCellH;
+        cellH = maxCellH * scaleFactor;
         cellW = cellH * photoRatio;
       } else {
         // 寬度限制
-        cellW = maxCellW;
+        cellW = maxCellW * scaleFactor;
         cellH = cellW / photoRatio;
       }
 
@@ -400,10 +409,7 @@ export const Edit: React.FC<EditProps> = ({
       }
 
       imgs.forEach((img, i) => {
-        const r = Math.floor(i / cols);
-        const c = i % cols;
-        const x = margin + c * (cellW + gap);
-        const y = startY + r * (cellH + gap);
+        const { x, y } = calculatePhotoPosition(i, cellW, cellH, gap, margin, startY);
 
         // 使用 cover 模式，確保圖片填滿3:4比例格子並保持比例
         const imgRatio = img.width / img.height;
@@ -651,7 +657,7 @@ export const Edit: React.FC<EditProps> = ({
                 gap: "12px",
                 height: "100%",
                 overflowY: "auto",
-                paddingRight: "8px",
+                //paddingRight: "8px",
                 // 隱藏滾動條但保持滾動功能
                 scrollbarWidth: "none", // Firefox
                 msOverflowStyle: "none", // IE/Edge

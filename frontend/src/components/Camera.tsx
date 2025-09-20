@@ -273,54 +273,6 @@ export const Camera: React.FC<CameraProps> = ({ onComplete }) => {
               boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
             }}
           >
-            {/* 已拍攝縮圖列表（拍攝階段顯示） */}
-            {!capturedPhotos[currentPhotoIndex] && (
-              <div style={{ display: "grid", gap: 12 }}>
-                {[0, 1, 2, 3]
-                  .filter((i) => capturedPhotos[i])
-                  .map((i) => (
-                    <div
-                      key={i}
-                      style={{
-                        borderRadius: 12,
-                        overflow: "hidden",
-                        position: "relative",
-                        background: "#fff",
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
-                      }}
-                    >
-                      <img
-                        src={capturedPhotos[i]!}
-                        alt={`thumb_${i}`}
-                        style={{
-                          width: "100%",
-                          height: 100,
-                          objectFit: "cover",
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 8,
-                          right: 8,
-                          width: 22,
-                          height: 22,
-                          borderRadius: "50%",
-                          background: "#3b82f6",
-                          color: "#fff",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 12,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {i + 1}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
 
             {!capturedPhotos[currentPhotoIndex] && (
               <button

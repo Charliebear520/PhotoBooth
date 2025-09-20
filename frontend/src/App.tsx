@@ -13,8 +13,6 @@ function App() {
   // 合成後的 dataURL（透明底 2x2）
   const [collageDataUrl, setCollageDataUrl] = useState<string | null>(null);
 
-  // 自定義文字
-  const [customText] = useState<string>("SNAPP!");
 
   // 攝像頭相關狀態
   const [capturedPhotos, setCapturedPhotos] = useState<(string | null)[]>([
@@ -61,7 +59,6 @@ function App() {
           capturedPhotos={capturedPhotos}
           onCompose={handleCompose}
           onBack={handleBackToCamera}
-          customText={customText}
         />
       );
     

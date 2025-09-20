@@ -5,14 +5,12 @@ interface ComposeProps {
   capturedPhotos: (string | null)[];
   onCompose: (dataUrl: string) => void;
   onBack: () => void;
-  customText: string;
 }
 
 export const Compose: React.FC<ComposeProps> = ({
   capturedPhotos,
   onCompose,
   onBack,
-  customText,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -34,16 +32,14 @@ export const Compose: React.FC<ComposeProps> = ({
     const cols = 2;
     const rows = 2;
     const gap = 20;
-    const bottomSpace = 100;
+    const bottomSpace = 60; // 減少底部空間，因為沒有文字了
 
-    const cellAspectW = 1;
-    const cellAspectH = 1;
 
     // 計算可用空間（扣除底部文字空間）
     const availableW = canvas.width;
     const availableH = canvas.height - bottomSpace;
 
-    // 計算格子尺寸 - 確保正方形
+    // 計算格子尺寸 - 確保3:4比例
     const availableWidthForGrid = availableW - gap;
     const availableHeightForGrid = availableH - gap;
 
@@ -51,10 +47,20 @@ export const Compose: React.FC<ComposeProps> = ({
     const maxCellW = availableWidthForGrid / cols;
     const maxCellH = availableHeightForGrid / rows;
 
-    // 使用較小的尺寸確保格子是正方形且不超出邊界
-    const cellSize = Math.min(maxCellW, maxCellH);
-    const cellW = cellSize;
-    const cellH = cellSize;
+    // 照片比例 3:4
+    const photoRatio = 3 / 4;
+    
+    // 計算格子尺寸，保持3:4比例
+    let cellW, cellH;
+    if (maxCellW / maxCellH > photoRatio) {
+      // 高度限制
+      cellH = maxCellH;
+      cellW = cellH * photoRatio;
+    } else {
+      // 寬度限制
+      cellW = maxCellW;
+      cellH = cellW / photoRatio;
+    }
 
     // 計算總使用空間
     const totalW = cols * cellW + (cols - 1) * gap;
@@ -83,9 +89,9 @@ export const Compose: React.FC<ComposeProps> = ({
       const x = startX + c * (cellW + gap);
       const y = startY + r * (cellH + gap);
 
-      // 使用 cover 模式，確保圖片填滿正方形格子並保持比例
+      // 使用 cover 模式，確保圖片填滿3:4比例格子並保持比例
       const imgRatio = img.width / img.height;
-      const cellRatio = 1; // 正方形格子
+      const cellRatio = photoRatio; // 3:4 比例
 
       let sourceX = 0;
       let sourceY = 0;
@@ -139,17 +145,10 @@ export const Compose: React.FC<ComposeProps> = ({
       ctx.restore();
     });
 
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 48px sans-serif";
-    ctx.textAlign = "center";
-    ctx.shadowColor = "rgba(0,0,0,0.35)";
-    ctx.shadowBlur = 10;
-    ctx.fillText(customText, canvas.width / 2, canvas.height - 48);
-    ctx.shadowBlur = 0;
 
     const dataUrl = canvas.toDataURL("image/png");
     onCompose(dataUrl);
-  }, [canCompose, capturedPhotos, customText, onCompose]);
+  }, [canCompose, capturedPhotos, onCompose]);
 
   return (
     <div

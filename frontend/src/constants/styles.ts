@@ -1,13 +1,9 @@
-// 背景相框風格（大膽視覺的背景圖）
+// 背景相框風格（使用預設的相框背景圖片）
 export const BG_STYLES: Record<string, string> = {
-  清新日系:
-    "hyper minimal poster background, airy white space, soft pastel gradients (peach, mint, sky blue), floating geometric shapes, subtle paper texture, high-key light, editorial layout, photo booth poster, 3:4, ultra clean design, award-winning graphic design, art school studio vibe",
-  復古菲林:
-    "bold retro film poster background, warm Kodak tones, halftone dots, misregistered CMYK print, chunky typography blocks, grainy paper, 90s Japanese magazine layout, orange and teal accents, 3:4, graphic composition with asymmetry, daring vintage aesthetic",
-  韓系膠片:
-    "modern Korean editorial poster background, muted pastel palette (sage, beige, dusty pink), clean grid, rounded shapes, soft vignette, risograph-like ink texture, minimalist but playful, negative space hero, 3:4 layout, sophisticated art direction",
-  黑白經典:
-    "high-contrast black and white poster background, bold Bauhaus layout, giant stripe patterns, checkerboard fragments, thick white borders, stark typographic panels, dramatic light and shadow, gallery exhibition poster aesthetic, 3:4, museum-level design",
+  清新日系: "/frames/清新日系.png",
+  復古菲林: "/frames/復古菲林.png",
+  韓系膠片: "/frames/韓系膠片.png",
+  黑白經典: "/frames/黑白經典.png",
 };
 
 // 照片（人像）風格（參考附圖）
@@ -23,6 +19,6 @@ export const PHOTO_STYLES: Record<string, string> = {
 };
 
 // 拼貼列印尺寸（像素）
-export const COLLAGE_WIDTH = 1200; // 4:6 比例可列印
-export const COLLAGE_HEIGHT = 1600;
+export const COLLAGE_WIDTH = 1200; // 2:3 比例可列印
+export const COLLAGE_HEIGHT = 1800;
 

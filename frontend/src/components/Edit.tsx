@@ -25,6 +25,9 @@ export const Edit: React.FC<EditProps> = ({
   // 風格化處理結果（最終輸出）
   const [stylizedUrl, setStylizedUrl] = useState<string | null>(null);
 
+  // 當前預覽圖片（包含背景的即時預覽）
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   // 其餘控制
   const [loadingStyleKey, setLoadingStyleKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,17 +36,12 @@ export const Edit: React.FC<EditProps> = ({
   const [bgKey, setBgKey] = useState<BackgroundStyle | null>("清新日系");
   const [photoKey, setPhotoKey] = useState<PhotoStyle | null>(null);
 
-  // 自定義文字
-  const [customText, setCustomText] = useState<string>("SNAPP!");
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 即時預覽更新函數
-  const updatePreviewWithCustomText = useCallback(async () => {
-    if (!collageDataUrl && !stylizedUrl) return;
-
-    const sourceUrl = stylizedUrl || collageDataUrl;
-    if (!sourceUrl) return;
+  // 生成即時預覽（包含背景和文字）
+  const generatePreview = useCallback(async () => {
+    if (!collageDataUrl) return;
 
     const canvas = document.createElement("canvas");
     canvas.width = COLLAGE_WIDTH;
@@ -51,54 +49,165 @@ export const Edit: React.FC<EditProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // 載入現有圖片
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await new Promise<void>((res, rej) => {
-      img.onload = () => res();
-      img.onerror = () => rej(new Error("load image failed"));
-      img.src = sourceUrl;
-    });
+    // 白底
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 繪製圖片
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // 直接使用原始照片進行佈局
+    const margin = 60;
+    const cols = 2;
+    const rows = 2;
+    const gap = 20;
+    const bottomSpace = 60; // 減少底部空間，因為沒有文字了
+    
+    const availableW = canvas.width - margin * 2 - (cols - 1) * gap;
+    const availableH = canvas.height - margin * 2 - (rows - 1) * gap - bottomSpace;
+    
+    // 照片比例 3:4
+    const photoRatio = 3 / 4;
+    
+    const maxCellW = availableW / cols;
+    const maxCellH = availableH / rows;
+    
+    // 計算格子尺寸，保持3:4比例
+    let cellW, cellH;
+    if (maxCellW / maxCellH > photoRatio) {
+      // 高度限制
+      cellH = maxCellH;
+      cellW = cellH * photoRatio;
+    } else {
+      // 寬度限制
+      cellW = maxCellW;
+      cellH = cellW / photoRatio;
+    }
+    
+    const usedH = rows * cellH + (rows - 1) * gap;
+    const startY = margin + (availableH - usedH) / 2;
 
-    // 清除原有文字區域（底部120px）
-    ctx.fillStyle = stylizedUrl ? "#ffffff" : "#ffffff";
-    ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
+    // 載入原始照片
+    const loadedPhotos: HTMLImageElement[] = [];
+    for (const photoUrl of capturedPhotos) {
+      if (!photoUrl) continue;
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((res, rej) => {
+        img.onload = () => res();
+        img.onerror = () => rej(new Error("照片載入失敗"));
+        img.src = photoUrl;
+      });
+      loadedPhotos.push(img);
+    }
+    
+    for (let i = 0; i < loadedPhotos.length; i++) {
+      const img = loadedPhotos[i];
+      const r = Math.floor(i / cols);
+      const c = i % cols;
+      const x = margin + c * (cellW + gap);
+      const y = startY + r * (cellH + gap);
+      
+      // 使用 cover 模式，確保圖片填滿3:4比例格子並保持比例
+      const imgRatio = img.width / img.height;
+      const cellRatio = photoRatio; // 3:4 比例
 
-    // 重新繪製背景（如果需要）
-    if (stylizedUrl && bgKey) {
-      // 這裡可以重新繪製背景，但為簡化直接使用現有圖片
+      let sourceX = 0;
+      let sourceY = 0;
+      let sourceW = img.width;
+      let sourceH = img.height;
+
+      if (imgRatio > cellRatio) {
+        // 圖片比格子寬，裁切左右
+        sourceW = img.height * cellRatio;
+        sourceX = (img.width - sourceW) / 2;
+      } else {
+        // 圖片比格子高，裁切上下
+        sourceH = img.width / cellRatio;
+        sourceY = (img.height - sourceH) / 2;
+      }
+      
+      // 圓角矩形路徑
+      const rad = 16;
+      const path = new Path2D();
+      path.moveTo(x + rad, y);
+      path.lineTo(x + cellW - rad, y);
+      path.quadraticCurveTo(x + cellW, y, x + cellW, y + rad);
+      path.lineTo(x + cellW, y + cellH - rad);
+      path.quadraticCurveTo(x + cellW, y + cellH, x + cellW - rad, y + cellH);
+      path.lineTo(x + rad, y + cellH);
+      path.quadraticCurveTo(x, y + cellH, x, y + cellH - rad);
+      path.lineTo(x, y + rad);
+      path.quadraticCurveTo(x, y, x + rad, y);
+      
+      // 陰影
+      const shadowSpread = 12;
+      (ctx as any).shadowColor = "rgba(0,0,0,0.18)";
+      (ctx as any).shadowBlur = shadowSpread;
+      (ctx as any).shadowOffsetY = 6;
+      ctx.fillStyle = "rgba(255,255,255,0.001)";
+      ctx.fill(path);
+      (ctx as any).shadowBlur = 0;
+      
+      ctx.save();
+      ctx.clip(path);
+      ctx.drawImage(
+        img,
+        sourceX,
+        sourceY,
+        sourceW,
+        sourceH,
+        x,
+        y,
+        cellW,
+        cellH
+      );
+      ctx.restore();
     }
 
-    // 繪製新的自定義文字
-    ctx.fillStyle = "#111";
-    ctx.font = "bold 48px sans-serif";
-    ctx.textAlign = "center";
-    ctx.shadowColor = "rgba(0,0,0,0.35)";
-    ctx.shadowBlur = 10;
-    ctx.fillText(customText, canvas.width / 2, canvas.height - 48);
-    ctx.shadowBlur = 0;
+    // 載入並繪製相框背景（在照片上方）
+    if (bgKey) {
+      try {
+        const bg = await new Promise<HTMLImageElement>((res, rej) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => res(img);
+          img.onerror = () => rej(new Error("背景圖片載入失敗"));
+          img.src = BG_STYLES[bgKey];
+        });
+        
+        const bgRatio = bg.width / bg.height;
+        const cvRatio = canvas.width / canvas.height;
+        let bgW = canvas.width;
+        let bgH = canvas.height;
+        if (bgRatio > cvRatio) {
+          bgH = canvas.height;
+          bgW = bgH * bgRatio;
+        } else {
+          bgW = canvas.width;
+          bgH = bgW / bgRatio;
+        }
+        ctx.drawImage(
+          bg,
+          (canvas.width - bgW) / 2,
+          (canvas.height - bgH) / 2,
+          bgW,
+          bgH
+        );
+      } catch (error) {
+        console.warn("背景載入失敗，使用白底:", error);
+      }
+    }
 
     const newDataUrl = canvas.toDataURL("image/png");
-    if (stylizedUrl) {
-      setStylizedUrl(newDataUrl);
-    } else {
-      // 更新 collageDataUrl 需要通過父組件
-    }
-  }, [collageDataUrl, stylizedUrl, customText, bgKey]);
+    setPreviewUrl(newDataUrl);
+  }, [capturedPhotos, bgKey]);
 
-  // 監聽文字變化，即時更新預覽
+
+  // 監聽背景風格變化，即時更新預覽
   useEffect(() => {
-    if (customText !== "SNAPP!" && (collageDataUrl || stylizedUrl)) {
-      const timeoutId = setTimeout(() => {
-        updatePreviewWithCustomText();
-      }, 300); // 防抖動，避免過於頻繁的更新
-
-      return () => clearTimeout(timeoutId);
+    if (capturedPhotos.filter(Boolean).length === 4) {
+      generatePreview();
     }
-  }, [customText, updatePreviewWithCustomText, collageDataUrl, stylizedUrl]);
+  }, [bgKey, generatePreview, capturedPhotos]);
+
 
   // 單張風格化工具
   const stylizeSingle = useCallback(
@@ -165,13 +274,13 @@ export const Edit: React.FC<EditProps> = ({
   }, [photoKey]);
 
   const downloadImage = useCallback(() => {
-    const url = stylizedUrl || collageDataUrl;
+    const url = stylizedUrl || previewUrl || collageDataUrl;
     if (!url) return;
     const a = document.createElement("a");
     a.href = url;
     a.download = "photobooth.png";
     a.click();
-  }, [stylizedUrl, collageDataUrl]);
+  }, [stylizedUrl, previewUrl, collageDataUrl]);
 
   // 生成背景，最後合成（在此階段統一對四張照片做風格化）
   const runStyling = useCallback(async () => {
@@ -229,21 +338,13 @@ export const Edit: React.FC<EditProps> = ({
         }
       }
 
-      // 3) 背景生成（若有）
+      // 3) 背景載入（使用預設相框背景圖片）
       let bgUrl: string | null = null;
       if (bgKey) {
-        const gen = await axios.post<GenerateResponse>("/api/generate", {
-          prompt: BG_STYLES[bgKey],
-          number_of_images: 1,
-          aspect_ratio: "3:4",
-          sample_image_size: "2K",
-        });
-        const bgB64 = gen.data.images?.[0]?.image_base64;
-        if (!bgB64) throw new Error("未取得背景圖");
-        bgUrl = `data:image/png;base64,${bgB64}`;
+        bgUrl = BG_STYLES[bgKey];
       }
 
-      // 4) 共同合成（白底 -> 背景 -> 2x2 圖片）
+      // 4) 共同合成（白底 -> 2x2 圖片 -> 相框背景）
       const canvas = document.createElement("canvas");
       canvas.width = COLLAGE_WIDTH;
       canvas.height = COLLAGE_HEIGHT;
@@ -253,52 +354,34 @@ export const Edit: React.FC<EditProps> = ({
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // 背景
-      if (bgUrl) {
-        const bg = await new Promise<HTMLImageElement>((res, rej) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = () => res(img);
-          img.onerror = () => rej(new Error("bg load fail"));
-          img.src = bgUrl!;
-        });
-        const bgRatio = bg.width / bg.height;
-        const cvRatio = canvas.width / canvas.height;
-        let bgW = canvas.width;
-        let bgH = canvas.height;
-        if (bgRatio > cvRatio) {
-          bgH = canvas.height;
-          bgW = bgH * bgRatio;
-        } else {
-          bgW = canvas.width;
-          bgH = bgW / bgRatio;
-        }
-        ctx.drawImage(
-          bg,
-          (canvas.width - bgW) / 2,
-          (canvas.height - bgH) / 2,
-          bgW,
-          bgH
-        );
-      }
-
       // 2x2 佈局（正方形）
       const margin = 60;
       const cols = 2;
       const rows = 2;
       const gap = 20;
-      const bottomSpace = 100;
+      const bottomSpace = 60; // 減少底部空間，因為沒有文字了
       // 正方形格子
       const availableW = canvas.width - margin * 2 - (cols - 1) * gap;
       const availableH =
         canvas.height - margin * 2 - (rows - 1) * gap - bottomSpace;
 
-      // 計算正方形格子尺寸
+      // 照片比例 3:4
+      const photoRatio = 3 / 4;
+      
+      // 計算格子尺寸，保持3:4比例
       const maxCellW = availableW / cols;
       const maxCellH = availableH / rows;
-      const cellSize = Math.min(maxCellW, maxCellH);
-      const cellW = cellSize;
-      const cellH = cellSize;
+      
+      let cellW, cellH;
+      if (maxCellW / maxCellH > photoRatio) {
+        // 高度限制
+        cellH = maxCellH;
+        cellW = cellH * photoRatio;
+      } else {
+        // 寬度限制
+        cellW = maxCellW;
+        cellH = cellW / photoRatio;
+      }
 
       const usedH = rows * cellH + (rows - 1) * gap;
       const startY = margin + (availableH - usedH) / 2;
@@ -322,9 +405,9 @@ export const Edit: React.FC<EditProps> = ({
         const x = margin + c * (cellW + gap);
         const y = startY + r * (cellH + gap);
 
-        // 使用 cover 模式，確保圖片填滿正方形格子並保持比例
+        // 使用 cover 模式，確保圖片填滿3:4比例格子並保持比例
         const imgRatio = img.width / img.height;
-        const cellRatio = 1; // 正方形格子
+        const cellRatio = photoRatio; // 3:4 比例
 
         let sourceX = 0;
         let sourceY = 0;
@@ -378,11 +461,34 @@ export const Edit: React.FC<EditProps> = ({
         ctx.restore();
       });
 
-      // 下方標題
-      ctx.fillStyle = "#111";
-      ctx.font = "bold 48px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(customText, canvas.width / 2, canvas.height - 48);
+      // 相框背景（在照片上方）
+      if (bgUrl) {
+        const bg = await new Promise<HTMLImageElement>((res, rej) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => res(img);
+          img.onerror = () => rej(new Error("背景圖片載入失敗"));
+          img.src = bgUrl!;
+        });
+        const bgRatio = bg.width / bg.height;
+        const cvRatio = canvas.width / canvas.height;
+        let bgW = canvas.width;
+        let bgH = canvas.height;
+        if (bgRatio > cvRatio) {
+          bgH = canvas.height;
+          bgW = bgH * bgRatio;
+        } else {
+          bgW = canvas.width;
+          bgH = bgW / bgRatio;
+        }
+        ctx.drawImage(
+          bg,
+          (canvas.width - bgW) / 2,
+          (canvas.height - bgH) / 2,
+          bgW,
+          bgH
+        );
+      }
 
       const out = canvas.toDataURL("image/png");
       setStylizedUrl(out);
@@ -391,7 +497,7 @@ export const Edit: React.FC<EditProps> = ({
     } finally {
       setLoadingStyleKey(null);
     }
-  }, [capturedPhotos, bgKey, photoKey, customText]);
+  }, [capturedPhotos, bgKey, photoKey]);
 
   return (
     <div
@@ -483,6 +589,19 @@ export const Edit: React.FC<EditProps> = ({
                   <img
                     src={stylizedUrl}
                     alt="stylized"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      border: "2px solid #e2e8f0",
+                      borderRadius: "12px",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                    }}
+                  />
+                ) : previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="preview"
                     style={{
                       width: "100%",
                       height: "100%",
@@ -668,83 +787,6 @@ export const Edit: React.FC<EditProps> = ({
                 </div>
               </div>
 
-              {/* 自定義文字編輯 */}
-              <div
-                style={{
-                  background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  border: "1px solid #0ea5e9",
-                  flexShrink: 0,
-                }}
-              >
-                <h3
-                  style={{
-                    marginBottom: "8px",
-                    color: "#0369a1",
-                    fontSize: "0.95rem",
-                    fontWeight: "bold",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
-                >
-                  ✏️ 自定義文字
-                </h3>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                  }}
-                >
-                  <label
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: "bold",
-                      color: "#475569",
-                    }}
-                  >
-                    照片下方顯示的文字：
-                  </label>
-                  <input
-                    type="text"
-                    value={customText}
-                    onChange={(e) => setCustomText(e.target.value)}
-                    placeholder="輸入要顯示的文字..."
-                    style={{
-                      padding: "12px 16px",
-                      fontSize: "16px",
-                      border: "2px solid #e2e8f0",
-                      borderRadius: "10px",
-                      background: "#ffffff",
-                      color: "#2d3748",
-                      fontWeight: "bold",
-                      transition: "all 0.3s ease",
-                      outline: "none",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "#0ea5e9";
-                      e.target.style.boxShadow =
-                        "0 4px 12px rgba(14, 165, 233, 0.3)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "#e2e8f0";
-                      e.target.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
-                    }}
-                  />
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#64748b",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    💡 提示：文字會即時顯示在左側預覽中
-                  </div>
-                </div>
-              </div>
 
               {/* 操作按鈕 */}
               <div
@@ -819,25 +861,25 @@ export const Edit: React.FC<EditProps> = ({
 
                   <button
                     onClick={downloadImage}
-                    disabled={!stylizedUrl && !collageDataUrl}
+                    disabled={!stylizedUrl && !previewUrl && !collageDataUrl}
                     style={{
                       padding: "10px 16px",
                       fontSize: "13px",
                       background:
-                        !stylizedUrl && !collageDataUrl
+                        !stylizedUrl && !previewUrl && !collageDataUrl
                           ? "#94a3b8"
                           : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                       color: "white",
                       border: "none",
                       borderRadius: "8px",
                       cursor:
-                        !stylizedUrl && !collageDataUrl
+                        !stylizedUrl && !previewUrl && !collageDataUrl
                           ? "not-allowed"
                           : "pointer",
                       fontWeight: "bold",
                       transition: "all 0.3s ease",
                       boxShadow:
-                        !stylizedUrl && !collageDataUrl
+                        !stylizedUrl && !previewUrl && !collageDataUrl
                           ? "none"
                           : "0 2px 8px rgba(16, 185, 129, 0.3)",
                     }}

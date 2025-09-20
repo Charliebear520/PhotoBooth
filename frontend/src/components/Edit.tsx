@@ -223,15 +223,6 @@ export const Edit: React.FC<EditProps> = ({
       const photoDataUrl = capturedPhotos[idx];
       if (!photoDataUrl || !photoKey) return; // 無照片或未選照片風格則跳過
 
-      // 如果是原始照片風格，直接使用原始照片，不進行AI處理
-      if (photoKey === "原始照片") {
-        setStyledUrls((prev) => {
-          const c = [...prev];
-          c[idx] = photoDataUrl;
-          return c;
-        });
-        return;
-      }
 
       // 將dataURL轉換為File
       const response = await fetch(photoDataUrl);

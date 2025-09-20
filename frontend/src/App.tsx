@@ -41,6 +41,10 @@ function App() {
               setStep("camera");
   };
 
+  const handleBackToHome = () => {
+    setStep("home");
+  };
+
   // 根據當前步驟渲染對應組件
   switch (step) {
     case "home":
@@ -67,7 +71,7 @@ function App() {
         <Edit
           capturedPhotos={capturedPhotos}
           collageDataUrl={collageDataUrl}
-          onBack={handleBackToCamera}
+          onBackToHome={handleBackToHome}
         />
       );
     

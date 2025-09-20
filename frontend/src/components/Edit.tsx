@@ -6,13 +6,13 @@ import type { BackgroundStyle, PhotoStyle, GenerateResponse } from "../types";
 interface EditProps {
   capturedPhotos: (string | null)[];
   collageDataUrl: string | null;
-  onBack: () => void;
+  onBackToHome: () => void;
 }
 
 export const Edit: React.FC<EditProps> = ({
   capturedPhotos,
   collageDataUrl,
-  onBack,
+  onBackToHome,
 }) => {
   // 單張風格化的結果（若無則使用原圖）
   const [, setStyledUrls] = useState<(string | null)[]>([
@@ -887,21 +887,21 @@ export const Edit: React.FC<EditProps> = ({
                   }}
                 >
                   <button
-                    onClick={onBack}
+                    onClick={onBackToHome}
                     style={{
                       padding: "10px 16px",
                       fontSize: "13px",
-                      background: "#ffffff",
-                      color: "#4a5568",
-                      border: "2px solid #e2e8f0",
+                      background: "linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)",
+                      color: "white",
+                      border: "none",
                       borderRadius: "8px",
                       cursor: "pointer",
                       fontWeight: "bold",
                       transition: "all 0.3s ease",
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                      boxShadow: "0 2px 8px rgba(255, 107, 107, 0.3)",
                     }}
                   >
-                    🔄 重新拍攝
+                    🏠 重新開始
                   </button>
 
                   <button
